@@ -13,6 +13,7 @@ import {
   svgUrlToImg,
   getStyles,
   setImgDataUrl,
+  setDoc,
 } from './util'
 
 export async function toSvg<T extends HTMLElement>(
@@ -50,6 +51,7 @@ export async function toImage<T extends HTMLElement>(
   node: T,
   options: Options = {},
 ): Promise<HTMLImageElement> {
+  setDoc(node.ownerDocument)
   const svg = await toSvg(node, options)
   return svgUrlToImg(svg, options)
 }
@@ -58,74 +60,86 @@ export async function toCanvas<T extends HTMLElement>(
   node: T,
   options: Options = {},
 ): Promise<HTMLCanvasElement> {
-  const img = await toImage(node, options)
-  const { width, height } = getImageSize(node, options, img)
-  const canvas = document.createElement('canvas')
-  const context = canvas.getContext('2d', { willReadFrequently: true })!
-  const ratio = options.pixelRatio || getPixelRatio()
-  const canvasWidth = options.canvasWidth || width
-  const canvasHeight = options.canvasHeight || height
+  const doc = node.ownerDocument
+  setDoc(doc)
+  try {
+    const img = await toImage(node, options)
+    const { width, height } = getImageSize(node, options, img)
+    const canvas = doc.createElement('canvas')
+    const context = canvas.getContext('2d', { willReadFrequently: true })!
+    const ratio = options.pixelRatio || getPixelRatio()
+    const canvasWidth = options.canvasWidth || width
+    const canvasHeight = options.canvasHeight || height
 
-  canvas.width = canvasWidth * ratio
-  canvas.height = canvasHeight * ratio
+    canvas.width = canvasWidth * ratio
+    canvas.height = canvasHeight * ratio
 
-  if (!options.skipAutoScale) {
-    checkCanvasDimensions(canvas)
+    if (!options.skipAutoScale) {
+      checkCanvasDimensions(canvas)
+    }
+    canvas.style.width = `${canvasWidth}`
+    canvas.style.height = `${canvasHeight}`
+
+    if (options.backgroundColor) {
+      context.fillStyle = options.backgroundColor
+      context.fillRect(0, 0, canvas.width, canvas.height)
+    }
+
+    context.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+    return canvas
+  } finally {
+    setDoc(document)
   }
-  canvas.style.width = `${canvasWidth}`
-  canvas.style.height = `${canvasHeight}`
-
-  if (options.backgroundColor) {
-    context.fillStyle = options.backgroundColor
-    context.fillRect(0, 0, canvas.width, canvas.height)
-  }
-
-  context.drawImage(img, 0, 0, canvas.width, canvas.height)
-
-  return canvas
 }
 
 export async function toCanvasList<T extends HTMLElement>(
   node: T,
   options: Options = {},
 ): Promise<Array<HTMLCanvasElement>> {
-  const img = await toImage(node, options)
-  const { width, height } = getImageSize(node, options, img)
-  const ratio = options.pixelRatio || getPixelRatio()
-  let canvasWidth = (options.canvasWidth || width) * ratio
-  let canvasHeight = (options.canvasHeight || height) * ratio
-  const dimensionLimit = getDimensionLimit()
-  if (canvasWidth > dimensionLimit) {
-    canvasHeight *= dimensionLimit / canvasWidth
-    canvasWidth = dimensionLimit
-  }
-
-  const result: Array<HTMLCanvasElement> = []
-  const scale = canvasWidth / img.width
-  for (let curY = 0; curY < canvasHeight; curY += dimensionLimit) {
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d', { willReadFrequently: true })!
-    const height1 = Math.min(canvasHeight - curY, dimensionLimit)
-    canvas.width = canvasWidth
-    canvas.height = height1
-    if (options.backgroundColor) {
-      context.fillStyle = options.backgroundColor
-      context.fillRect(0, 0, canvas.width, canvas.height)
+  const doc = node.ownerDocument
+  setDoc(doc)
+  try {
+    const img = await toImage(node, options)
+    const { width, height } = getImageSize(node, options, img)
+    const ratio = options.pixelRatio || getPixelRatio()
+    let canvasWidth = (options.canvasWidth || width) * ratio
+    let canvasHeight = (options.canvasHeight || height) * ratio
+    const dimensionLimit = getDimensionLimit()
+    if (canvasWidth > dimensionLimit) {
+      canvasHeight *= dimensionLimit / canvasWidth
+      canvasWidth = dimensionLimit
     }
-    context.drawImage(
-      img,
-      0,
-      curY / scale,
-      canvasWidth / scale,
-      height1 / scale,
-      0,
-      0,
-      canvasWidth,
-      height1,
-    )
-    result.push(canvas)
+
+    const result: Array<HTMLCanvasElement> = []
+    const scale = canvasWidth / img.width
+    for (let curY = 0; curY < canvasHeight; curY += dimensionLimit) {
+      const canvas = doc.createElement('canvas')
+      const context = canvas.getContext('2d', { willReadFrequently: true })!
+      const height1 = Math.min(canvasHeight - curY, dimensionLimit)
+      canvas.width = canvasWidth
+      canvas.height = height1
+      if (options.backgroundColor) {
+        context.fillStyle = options.backgroundColor
+        context.fillRect(0, 0, canvas.width, canvas.height)
+      }
+      context.drawImage(
+        img,
+        0,
+        curY / scale,
+        canvasWidth / scale,
+        height1 / scale,
+        0,
+        0,
+        canvasWidth,
+        height1,
+      )
+      result.push(canvas)
+    }
+    return result
+  }finally {
+    setDoc(document) //避免引用所致内存溢出
   }
-  return result
 }
 
 export async function toPixelData<T extends HTMLElement>(

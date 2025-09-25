@@ -1,5 +1,12 @@
 import type { Options } from './types'
 
+let doc : Document = document
+export function getDoc() {
+  return doc
+}
+export function setDoc(docIn : Document) {
+  doc = docIn
+}
 export function resolveUrl(url: string, baseUrl: string | null): string {
   // url is absolute already
   if (url.match(/^[a-z]+:\/\//i)) {
@@ -16,7 +23,7 @@ export function resolveUrl(url: string, baseUrl: string | null): string {
     return url
   }
 
-  const doc = document.implementation.createHTMLDocument()
+  const doc = getDoc().implementation.createHTMLDocument()
   const base = doc.createElement('base')
   const a = doc.createElement('a')
 
@@ -183,7 +190,7 @@ export function getMaxCanvasHeight(width: number): number {
 }
 
 function get2dCtx(width: number, height: number) {
-  const canvas = document.createElement('canvas')
+  const canvas = doc.createElement('canvas')
   canvas.width = width
   canvas.height = height
   return canvas.getContext('2d', { willReadFrequently: true })!
@@ -339,8 +346,8 @@ export async function nodeToDataURL(
   opt: Options = {},
 ): Promise<string> {
   const xmlns = 'http://www.w3.org/2000/svg'
-  const svg = document.createElementNS(xmlns, 'svg')
-  const foreignObject = document.createElementNS(xmlns, 'foreignObject')
+  const svg = doc.createElementNS(xmlns, 'svg')
+  const foreignObject = doc.createElementNS(xmlns, 'foreignObject')
   // add a tail for check ending
   let heightWithTail = height
   if (opt.checkTail) heightWithTail += TailHeight * 2
@@ -367,7 +374,7 @@ export async function nodeToDataURL(
     )
   }
   if (opt.usePageCss) {
-    const style = document.createElementNS(xmlns, 'style')
+    const style = doc.createElementNS(xmlns, 'style')
     style.insertAdjacentText('beforeend', await getStyles())
     svg.insertBefore(style, foreignObject)
   }
@@ -394,7 +401,7 @@ export const isInstanceOfElement = <
 }
 
 export function getStyles() {
-  const styles = document.querySelectorAll('style,link[rel="stylesheet"]')
+  const styles = doc.querySelectorAll('style,link[rel="stylesheet"]')
   const promises: Array<Promise<string>> = []
   toArray(styles).forEach((el) => {
     const e = el as Element

@@ -1,6 +1,6 @@
 import type { Options } from './types'
 import { clonePseudoElements } from './clone-pseudos'
-import { createImage, toArray, isInstanceOfElement } from './util'
+import { createImage, toArray, isInstanceOfElement, getDoc } from './util'
 import { getMimeType } from './mimes'
 import { resourceToDataURL } from './dataurl'
 
@@ -14,7 +14,7 @@ async function cloneCanvasElement(canvas: HTMLCanvasElement) {
 
 async function cloneVideoElement(video: HTMLVideoElement, options: Options) {
   if (video.currentSrc) {
-    const canvas = document.createElement('canvas')
+    const canvas = getDoc().createElement('canvas')
     const ctx = canvas.getContext('2d')
     canvas.width = video.clientWidth
     canvas.height = video.clientHeight
@@ -112,7 +112,7 @@ function cloneCSSStyle<T extends HTMLElement>(nativeNode: T, clonedNode: T) {
   if (!targetStyle) {
     return
   }
-
+  const window = nativeNode.ownerDocument.defaultView || self
   const sourceStyle = window.getComputedStyle(nativeNode)
   if (sourceStyle.cssText) {
     targetStyle.cssText = sourceStyle.cssText
@@ -200,7 +200,7 @@ async function ensureSVGSymbols<T extends HTMLElement>(
     const id = use.getAttribute('xlink:href')
     if (id) {
       const exist = clone.querySelector(id)
-      const definition = document.querySelector(id) as HTMLElement
+      const definition = getDoc().querySelector(id) as HTMLElement
       if (!exist && definition && !processedDefs[id]) {
         // eslint-disable-next-line no-await-in-loop
         processedDefs[id] = (await cloneNode(definition, options, true))!
@@ -211,7 +211,7 @@ async function ensureSVGSymbols<T extends HTMLElement>(
   const nodes = Object.values(processedDefs)
   if (nodes.length) {
     const ns = 'http://www.w3.org/1999/xhtml'
-    const svg = document.createElementNS(ns, 'svg')
+    const svg = getDoc().createElementNS(ns, 'svg')
     svg.setAttribute('xmlns', ns)
     svg.style.position = 'absolute'
     svg.style.width = '0'
@@ -219,7 +219,7 @@ async function ensureSVGSymbols<T extends HTMLElement>(
     svg.style.overflow = 'hidden'
     svg.style.display = 'none'
 
-    const defs = document.createElementNS(ns, 'defs')
+    const defs = getDoc().createElementNS(ns, 'defs')
     svg.appendChild(defs)
 
     for (let i = 0; i < nodes.length; i++) {

@@ -36,6 +36,7 @@ function clonePseudoElement<T extends HTMLElement>(
   clonedNode: T,
   pseudo: Pseudo,
 ) {
+  const window = nativeNode.ownerDocument.defaultView || self
   const style = window.getComputedStyle(nativeNode, pseudo)
   const content = style.getPropertyValue('content')
   if (content === '' || content === 'none') {
@@ -49,7 +50,7 @@ function clonePseudoElement<T extends HTMLElement>(
     return
   }
 
-  const styleElement = document.createElement('style')
+  const styleElement = nativeNode.ownerDocument.createElement('style')
   styleElement.appendChild(getPseudoElementStyle(className, pseudo, style))
   clonedNode.appendChild(styleElement)
 }
