@@ -141,6 +141,24 @@ export async function toCanvasList<T extends HTMLElement>(
     setDoc(document) //避免引用所致内存溢出
   }
 }
+export async function toDataUrl<T extends HTMLElement>(node: T, options: Options = {}) {
+  var canvas = await toCanvas(node, options)
+  return canvas.toDataURL()
+  //const list = await toCanvasList(node, options)
+  //if(list.length == 1) return list[0].toDataURL()
+  // const imgs = list.map(canvas => {
+  //   var img = node.ownerDocument.createElement('img')
+  //   img.src = canvas.toDataURL()
+  //   return new Promise(((resolve, reject) => {
+  //     img.onload = resolve
+  //     img.onerror = reject
+  //   }).then(_=>img)
+  // })
+  // Promise.all(imgs).then(loaded=>{
+  //   const width = loaded[0].width
+  //   const height = loaded.reduce((c, total) => c + total, 0)
+  // })
+}
 
 export async function toPixelData<T extends HTMLElement>(
   node: T,

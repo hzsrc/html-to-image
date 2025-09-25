@@ -3,6 +3,7 @@ import { clonePseudoElements } from './clone-pseudos'
 import { createImage, toArray, isInstanceOfElement, getDoc } from './util'
 import { getMimeType } from './mimes'
 import { resourceToDataURL } from './dataurl'
+import { toDataUrl } from './index'
 
 async function cloneCanvasElement(canvas: HTMLCanvasElement) {
   const dataURL = canvas.toDataURL()
@@ -29,21 +30,21 @@ async function cloneVideoElement(video: HTMLVideoElement, options: Options) {
   return createImage(dataURL)
 }
 
-async function cloneIFrameElement(iframe: HTMLIFrameElement) {
-  try {
-    if (iframe?.contentDocument?.body) {
-      return (await cloneNode(
-        iframe.contentDocument.body,
-        {},
-        true,
-      )) as HTMLBodyElement
-    }
-  } catch {
-    // Failed to clone iframe
-  }
-
-  return iframe.cloneNode(false) as HTMLIFrameElement
-}
+// async function cloneIFrameElement(iframe: HTMLIFrameElement) {
+//   try {
+//     if (iframe?.contentDocument?.body) {
+//       return (await cloneNode(
+//         iframe.contentDocument.body,
+//         {},
+//         true,
+//       )) as HTMLBodyElement
+//     }
+//   } catch {
+//     // Failed to clone iframe
+//   }
+//
+//   return iframe.cloneNode(false) as HTMLIFrameElement
+// }
 
 async function cloneSingleNode<T extends HTMLElement>(
   node: T,
@@ -58,7 +59,15 @@ async function cloneSingleNode<T extends HTMLElement>(
   }
 
   if (isInstanceOfElement(node, HTMLIFrameElement)) {
-    return cloneIFrameElement(node)
+    if (node.offsetWidth + node.offsetHeight > 0) {
+      const body = node?.contentDocument?.body
+      if(body) {
+        const img = getDoc().createElement('img')
+        img.src = await toDataUrl(body, options)
+        return img
+      }
+    }
+    return getDoc().createElement('div') //cloneIFrameElement(node)
   }
 
   return node.cloneNode(false) as T
